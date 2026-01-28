@@ -10,12 +10,12 @@
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
             margin: 0; 
             padding: 20px; 
-            background-color: #f0f2f5; 
+            background-color: rgba(255, 61, 17, 0.1); /* Sedikit diperhalus warnanya */
             color: #333;
         }
 
         .container { 
-            max-width: 700px; 
+            max-width: 800px; 
             margin: auto; 
             background: white; 
             padding: 25px; 
@@ -89,23 +89,20 @@
             font-size: 15px;
         }
 
-        /* TOMBOL HAPUS (KONSISTEN) */
+        /* TOMBOL HAPUS */
         .btn-hapus { 
             background: #ff4d4d; 
             color: white; 
             border: none; 
-            padding: 8px 0;      /* Atas-bawah 8px */
-            width: 70px;         /* LEBAR TETAP AGAR SAMA SEMUA */
+            padding: 8px 0;
+            width: 70px;
             border-radius: 8px; 
             cursor: pointer; 
             font-size: 12px;
             font-weight: bold;
-            flex-shrink: 0;      /* PAKSA AGAR TIDAK MENCIUT */
+            flex-shrink: 0;
             text-align: center;
-            transition: background 0.2s;
         }
-
-        .btn-hapus:hover { background: #d93025; }
 
         /* TABEL ASSET */
         .table-wrapper { 
@@ -118,30 +115,22 @@
         table { 
             width: 100%; 
             border-collapse: collapse; 
-            min-width: 450px; 
+            min-width: 600px; /* Lebar minimum ditambah karena kolom bertambah */
         }
 
         th { 
             background: #f8f9fa; 
             color: #555; 
-            font-weight: 600; 
-            text-align: left;
             padding: 12px;
+            text-align: left;
             border-bottom: 2px solid #eee;
         }
 
-        td { 
-            padding: 12px; 
-            border-bottom: 1px solid #eee; 
-            font-size: 14px;
-        }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
 
-        /* RESPONSIVE UNTUK HP */
         @media (max-width: 600px) {
-            body { padding: 10px; }
-            .container { padding: 15px; }
-            .form-group { flex-direction: column; gap: 8px; }
-            input, .btn-tambah { width: 100%; box-sizing: border-box; }
+            .form-group { flex-direction: column; }
+            input, .btn-tambah { width: 100%; }
         }
     </style>
 </head>
@@ -160,6 +149,8 @@
         <h2>📦 Database Asset</h2>
         <div class="form-group">
             <input type="text" id="namaAsset" placeholder="Nama Barang">
+            <input type="text" id="inventAsset" placeholder="No. Inventaris">
+            <input type="text" id="spekAsset" placeholder="Spesifikasi">
             <input type="text" id="lokasiAsset" placeholder="Lokasi">
             <button class="btn-tambah" onclick="tambahAsset()" style="background:#34a853">Simpan</button>
         </div>
@@ -169,6 +160,8 @@
                 <thead>
                     <tr>
                         <th>Nama Asset</th>
+                        <th>Inventaris</th>
+                        <th>Spesifikasi</th>
                         <th>Lokasi</th>
                         <th style="width: 80px;">Aksi</th>
                     </tr>
@@ -181,35 +174,40 @@
     <script>
         // FUNGSI PENYIMPANAN
         function simpanKeStorage() {
-            // Simpan List Kegiatan
+            // 1. Simpan Kegiatan
             const kegiatan = [];
             document.querySelectorAll('#daftarKegiatan li span').forEach(span => {
                 kegiatan.push(span.innerText);
             });
-            localStorage.setItem('dataKegiatan_V2', JSON.stringify(kegiatan));
+            localStorage.setItem('dataKegiatan_V3', JSON.stringify(kegiatan));
 
-            // Simpan Tabel Asset
+            // 2. Simpan Asset (MENYIMPAN SEMUA KOLOM)
             const assets = [];
             document.querySelectorAll('#tabelAssetBody tr').forEach(tr => {
                 const cells = tr.querySelectorAll('td');
                 if(cells.length > 0) {
-                    assets.push({ nama: cells[0].innerText, lokasi: cells[1].innerText });
+                    assets.push({ 
+                        nama: cells[0].innerText, 
+                        invent: cells[1].innerText, 
+                        spek: cells[2].innerText, 
+                        lokasi: cells[3].innerText 
+                    });
                 }
             });
-            localStorage.setItem('dataAsset_V2', JSON.stringify(assets));
+            localStorage.setItem('dataAsset_V3', JSON.stringify(assets));
         }
 
         function muatData() {
             // Muat Kegiatan
-            const dataKegiatan = JSON.parse(localStorage.getItem('dataKegiatan_V2') || '[]');
+            const dataKegiatan = JSON.parse(localStorage.getItem('dataKegiatan_V3') || '[]');
             dataKegiatan.forEach(teks => renderKegiatan(teks));
 
             // Muat Asset
-            const dataAsset = JSON.parse(localStorage.getItem('dataAsset_V2') || '[]');
-            dataAsset.forEach(item => renderAsset(item.nama, item.lokasi));
+            const dataAsset = JSON.parse(localStorage.getItem('dataAsset_V3') || '[]');
+            dataAsset.forEach(item => renderAsset(item.nama, item.invent, item.spek, item.lokasi));
         }
 
-        // FUNGSI KEGIATAN
+        // LOGIKA KEGIATAN
         function tambahKegiatan() {
             const input = document.getElementById("inputKegiatan");
             if (!input.value.trim()) return;
@@ -225,22 +223,34 @@
             document.getElementById("daftarKegiatan").appendChild(li);
         }
 
-        // FUNGSI ASSET
+        // LOGIKA ASSET
         function tambahAsset() {
             const nama = document.getElementById("namaAsset");
+            const invent = document.getElementById("inventAsset");
+            const spek = document.getElementById("spekAsset");
             const lokasi = document.getElementById("lokasiAsset");
-            if (!nama.value.trim() || !lokasi.value.trim()) return;
-            renderAsset(nama.value, lokasi.value);
-            nama.value = ""; 
-            lokasi.value = "";
+
+            if (!nama.value.trim()) {
+                alert("Minimal isi Nama Barang!");
+                return;
+            }
+
+            renderAsset(nama.value, invent.value, spek.value, lokasi.value);
+            
+            // Kosongkan input setelah simpan
+            nama.value = ""; invent.value = ""; spek.value = ""; lokasi.value = "";
             simpanKeStorage();
         }
 
-        function renderAsset(nama, lokasi) {
+        function renderAsset(nama, invent, spek, lokasi) {
             const baris = document.getElementById("tabelAssetBody").insertRow();
-            baris.innerHTML = `<td>${nama}</td>
-                               <td>${lokasi}</td>
-                               <td><button class="btn-hapus" onclick="this.parentElement.parentElement.remove(); simpanKeStorage();">Hapus</button></td>`;
+            baris.innerHTML = `
+                <td>${nama}</td>
+                <td>${invent || '-'}</td>
+                <td>${spek || '-'}</td>
+                <td>${lokasi || '-'}</td>
+                <td><button class="btn-hapus" onclick="this.parentElement.parentElement.remove(); simpanKeStorage();">Hapus</button></td>
+            `;
         }
     </script>
 </body>
